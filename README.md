@@ -1,4 +1,4 @@
-# The Ban Docket — Learn-by-Building Roadmap
+# The Ban List — Learn-by-Building Roadmap
 
 A full-stack web app for you and your friends to log champion bans, built as a learning
 project. This README is your step-by-step guide. Don't rush — do each phase in order,
@@ -84,7 +84,7 @@ that need URL-encoding, and that Network Access allows your IP.
    npm run dev
    ```
 2. Vite will print a local URL, usually `http://localhost:5173`. Open it in your browser.
-3. You should see The Ban Docket. Try filing a ban — it should appear instantly, and if
+3. You should see The Ban List. Try filing a ban — it should appear instantly, and if
    you refresh the page, it should still be there (because it's now saved in MongoDB,
    not just sitting in your browser's memory).
 
@@ -99,7 +99,7 @@ on the internet so your friends (who don't have your code) can use it.
    ```
    git init
    git add .
-   git commit -m "Initial commit: working Ban Docket app"
+   git commit -m "Initial commit: working Ban List app"
    ```
 2. On GitHub.com, click **New repository**, name it `ban-docket-app`, leave it empty
    (no README/license), and create it.

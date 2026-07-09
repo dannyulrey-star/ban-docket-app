@@ -1,5 +1,5 @@
 // ============================================================
-// THE BAN DOCKET - BACKEND SERVER
+// THE BAN LIST - BACKEND SERVER
 // ============================================================
 // This file starts a small web server. Its only job is to:
 //   1. Talk to the database (MongoDB)
@@ -37,7 +37,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Simple health check - visiting this in a browser confirms the server is alive.
 app.get('/', (req, res) => {
-  res.json({ message: 'The Ban Docket API is running.' });
+  res.json({ message: 'The Ban List API is running.' });
 });
 
 // GET /api/bans - return every ban currently on the docket, newest first.

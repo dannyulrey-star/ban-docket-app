@@ -1,11 +1,12 @@
 // ============================================================
-// THE BAN DOCKET - FRONTEND (React)
+// THE BAN LIST - FRONTEND (React)
 // ============================================================
 // This is the piece your friends will actually see and click on.
 // It has no database of its own - every time it needs data, it
 // asks the BACKEND (server.js) for it over the internet, using "fetch".
 
 import { useState, useEffect } from 'react';
+import { CHAMPIONS } from './champions';
 
 // This is the address of your backend API.
 // While developing on your own computer, it points at localhost.
@@ -47,7 +48,7 @@ function App() {
       setBans(data);
       setError('');
     } catch (err) {
-      setError('Could not reach the ban docket server. Is the backend running?');
+      setError('Could not reach the ban list server. Is the backend running?');
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,7 @@ function App() {
     <div className="wrap">
       <header>
         <div className="eyebrow">Est. this friend group · No appeals</div>
-        <h1>THE BAN DOCKET</h1>
+        <h1>THE BAN LIST</h1>
         <p className="subtitle">Whoever files it, the group must honor it.</p>
       </header>
 
@@ -125,11 +126,18 @@ function App() {
             <label htmlFor="champion">Champion</label>
             <input
               id="champion"
-              placeholder="e.g. Yasuo"
+              list="champion-options"
+              placeholder="Start typing a champion..."
+              autoComplete="off"
               value={champion}
               onChange={(e) => setChampion(e.target.value)}
               required
             />
+            <datalist id="champion-options">
+              {CHAMPIONS.map((name) => (
+                <option value={name} key={name} />
+              ))}
+            </datalist>
           </div>
           <div>
             <label htmlFor="bannedFrom">Banned From (player)</label>

@@ -1,7 +1,7 @@
 {
   "name": "ban-docket-backend",
   "version": "1.0.0",
-  "description": "Backend API for The Ban Docket - a champion ban tracker for friend groups",
+  "description": "Backend API for The Ban List - a champion ban tracker for friend groups",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
