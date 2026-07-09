@@ -36,6 +36,7 @@ body {
   flex: 0 0 220px;
   position: sticky;
   top: 24px;
+  margin-top: 153px; /* lines the identity panel up with the "File a New Ban" box */
 }
 
 .wrap {
@@ -53,6 +54,7 @@ body {
     position: static;
     width: 100%;
     flex: none;
+    margin-top: 0;
   }
 
   .wrap {
