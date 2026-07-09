@@ -125,11 +125,11 @@ body {
 .switch-btn {
   background: transparent;
   border: 1px solid var(--teal);
-  color: var(--teal);
+  color: #fff;
 }
 .switch-btn:hover {
   background: var(--teal);
-  color: var(--parchment);
+  color: #fff;
 }
 
 .identity-error {

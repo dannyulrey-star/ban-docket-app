@@ -203,7 +203,7 @@ function App() {
     <div className="page">
       <aside className="sidebar">
         <div className="identity-panel">
-          <div className="identity-title">Who's Playing?</div>
+          <div className="identity-title">Banner Log In</div>
           {currentUser ? (
             <>
               <div className="identity-current">
