@@ -13,6 +13,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const Ban = require('./models/Ban'); // our data shape, defined in models/Ban.js
+const User = require('./models/User'); // a claimed player name, defined in models/User.js
 
 const app = express();
 
@@ -23,16 +24,17 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN }));
 app.use(express.json());  // lets us read JSON sent from the frontend (req.body)
 
-// Caps each visitor (by IP) to 30 requests per minute on the bans routes,
+// Caps each visitor (by IP) to 30 requests per minute on the bans/users routes,
 // so one buggy script or bad actor can't hammer the database.
-const bansRateLimit = rateLimit({
+const apiRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please slow down and try again shortly.' },
 });
-app.use('/api/bans', bansRateLimit);
+app.use('/api/bans', apiRateLimit);
+app.use('/api/users', apiRateLimit);
 
 // ---- CONNECT TO THE DATABASE ----
 // process.env.MONGODB_URI comes from your .env file (see .env.example).
@@ -63,6 +65,47 @@ function requireGroupSecret(req, res, next) {
   }
   next();
 }
+
+// Escapes regex special characters so a name like "J.T." can't be
+// interpreted as a pattern when we search for it below.
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// GET /api/users - return every claimed player name, so the frontend can
+// tell whether a name already exists before creating or "logging in" as it.
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find().sort({ name: 1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not fetch users.' });
+  }
+});
+
+// POST /api/users - claim a new player name. There's no password - this is
+// just a "pick your name" step, not real authentication.
+app.post('/api/users', requireGroupSecret, async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ error: 'name is required.' });
+    }
+
+    const existing = await User.findOne({ name: new RegExp(`^${escapeRegex(name)}$`, 'i') });
+    if (existing) {
+      return res.status(409).json({ error: 'That name is already taken.' });
+    }
+
+    const newUser = await User.create({ name });
+    res.status(201).json(newUser);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ error: 'That name is already taken.' });
+    }
+    res.status(500).json({ error: 'Could not create user.' });
+  }
+});
 
 // GET /api/bans - return every ban currently on the docket, newest first.
 app.get('/api/bans', async (req, res) => {

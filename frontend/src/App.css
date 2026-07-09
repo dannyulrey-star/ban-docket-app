@@ -23,10 +23,142 @@ body {
   min-height: 100vh;
 }
 
-.wrap {
-  max-width: 760px;
+.page {
+  max-width: 1040px;
   margin: 0 auto;
   padding: 32px 16px 80px;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.sidebar {
+  flex: 0 0 220px;
+  position: sticky;
+  top: 24px;
+}
+
+.wrap {
+  flex: 1;
+  min-width: 0;
+  max-width: 760px;
+}
+
+@media (max-width: 800px) {
+  .page {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: static;
+    width: 100%;
+    flex: none;
+  }
+
+  .wrap {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+.identity-panel {
+  background: linear-gradient(180deg, rgba(236, 227, 207, 0.06), rgba(236, 227, 207, 0.02));
+  border: 1px solid rgba(184, 147, 63, 0.4);
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.identity-title {
+  font-family: Georgia, serif;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 12px;
+}
+
+.identity-current {
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.identity-current b {
+  color: var(--gold);
+  font-size: 16px;
+}
+
+.identity-form label {
+  margin-top: 0;
+}
+
+.identity-form input {
+  margin-bottom: 10px;
+}
+
+.identity-btn,
+.switch-btn {
+  width: 100%;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.identity-btn {
+  background: var(--blood);
+  color: var(--parchment);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+}
+.identity-btn:hover {
+  background: var(--blood-bright);
+}
+.identity-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.switch-btn {
+  background: transparent;
+  border: 1px solid var(--teal);
+  color: var(--teal);
+}
+.switch-btn:hover {
+  background: var(--teal);
+  color: var(--parchment);
+}
+
+.identity-error {
+  color: var(--blood-bright);
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.identity-hint {
+  font-size: 11px;
+  color: var(--parchment-dark);
+  font-style: italic;
+  line-height: 1.4;
+  margin: 10px 0 0;
+}
+
+.login-required {
+  text-align: center;
+  padding: 24px 20px;
+  margin: 12px 0 30px;
+  color: var(--parchment-dark);
+  font-style: italic;
+  border: 1px dashed rgba(184, 147, 63, 0.3);
+  border-radius: 4px;
+}
+
+input[readOnly] {
+  opacity: 0.75;
+  cursor: default;
 }
 
 header {
