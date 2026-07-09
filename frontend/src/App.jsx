@@ -14,6 +14,10 @@ import { CHAMPIONS } from './champions';
 // (explained in the README) and this line picks that up automatically.
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// The shared "group secret" - anyone filing or lifting a ban must send this
+// back to the backend, which checks it against its own GROUP_SECRET value.
+const GROUP_SECRET = import.meta.env.VITE_GROUP_SECRET || '';
+
 function App() {
   // ---- STATE ----
   // "State" is just data that React watches. When state changes,
@@ -63,7 +67,10 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/api/bans`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-group-secret': GROUP_SECRET,
+        },
         body: JSON.stringify({ champion, bannedFrom, bannedBy, reason }),
       });
       if (!response.ok) throw new Error('Failed to file ban');
@@ -84,7 +91,10 @@ function App() {
   // Runs when someone clicks "Lift This Ban" on a specific case.
   async function liftBan(id) {
     try {
-      const response = await fetch(`${API_URL}/api/bans/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/api/bans/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-group-secret': GROUP_SECRET },
+      });
       if (!response.ok) throw new Error('Failed to lift ban');
       // Remove it from local state immediately, instead of waiting on a re-fetch
       setBans((prev) => prev.filter((ban) => ban._id !== id));

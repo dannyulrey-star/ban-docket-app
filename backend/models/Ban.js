@@ -8,21 +8,25 @@ const banSchema = new mongoose.Schema({
     type: String,
     required: true, // you can't save a ban without a champion name
     trim: true,     // automatically removes extra whitespace like "  Yasuo  " -> "Yasuo"
+    maxlength: 50,
   },
   bannedFrom: {
     type: String,   // the friend who is NOT allowed to play this champion
     required: true,
     trim: true,
+    maxlength: 50,
   },
   bannedBy: {
     type: String,   // the friend who filed the ban
     required: true,
     trim: true,
+    maxlength: 50,
   },
   reason: {
     type: String,   // optional - why the ban happened
     default: '',
     trim: true,
+    maxlength: 200,
   },
   createdAt: {
     type: Date,

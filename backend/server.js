@@ -10,6 +10,7 @@
 require('dotenv').config(); // loads secret values from a local .env file (like the database password)
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const Ban = require('./models/Ban'); // our data shape, defined in models/Ban.js
 
@@ -17,8 +18,21 @@ const app = express();
 
 // ---- MIDDLEWARE ----
 // "Middleware" runs on every request before it reaches your routes below.
-app.use(cors());          // allows the frontend (a different URL) to call this backend
+// Only let our own deployed frontend call this API - not any random website.
+// process.env.FRONTEND_ORIGIN comes from your .env file, e.g. https://ban-list.vercel.app
+app.use(cors({ origin: process.env.FRONTEND_ORIGIN }));
 app.use(express.json());  // lets us read JSON sent from the frontend (req.body)
+
+// Caps each visitor (by IP) to 30 requests per minute on the bans routes,
+// so one buggy script or bad actor can't hammer the database.
+const bansRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down and try again shortly.' },
+});
+app.use('/api/bans', bansRateLimit);
 
 // ---- CONNECT TO THE DATABASE ----
 // process.env.MONGODB_URI comes from your .env file (see .env.example).
@@ -40,6 +54,16 @@ app.get('/', (req, res) => {
   res.json({ message: 'The Ban List API is running.' });
 });
 
+// requireGroupSecret - blocks write requests unless the caller sends the
+// same shared secret we have in our own .env (process.env.GROUP_SECRET).
+// This isn't user accounts/login - it's just a "you know the group password" gate.
+function requireGroupSecret(req, res, next) {
+  if (req.header('x-group-secret') !== process.env.GROUP_SECRET) {
+    return res.status(401).json({ error: 'Missing or incorrect group secret.' });
+  }
+  next();
+}
+
 // GET /api/bans - return every ban currently on the docket, newest first.
 app.get('/api/bans', async (req, res) => {
   try {
@@ -52,7 +76,7 @@ app.get('/api/bans', async (req, res) => {
 
 // POST /api/bans - create a new ban.
 // The frontend sends data in req.body, e.g. { champion: "Yasuo", bannedFrom: "Jake", ... }
-app.post('/api/bans', async (req, res) => {
+app.post('/api/bans', requireGroupSecret, async (req, res) => {
   try {
     const { champion, bannedFrom, bannedBy, reason } = req.body;
 
@@ -72,7 +96,7 @@ app.post('/api/bans', async (req, res) => {
 
 // DELETE /api/bans/:id - remove one ban by its database ID.
 // ":id" is a "route parameter" - whatever the caller puts there is available as req.params.id
-app.delete('/api/bans/:id', async (req, res) => {
+app.delete('/api/bans/:id', requireGroupSecret, async (req, res) => {
   try {
     const deleted = await Ban.findByIdAndDelete(req.params.id);
     if (!deleted) {
