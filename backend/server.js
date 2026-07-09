@@ -17,6 +17,13 @@ const User = require('./models/User'); // a claimed player name, defined in mode
 
 const app = express();
 
+// Render (and most hosts) put the app behind a reverse proxy, so the real
+// visitor IP arrives in the X-Forwarded-For header instead of the raw
+// socket address. This tells Express to trust that header - without it,
+// express-rate-limit can't tell visitors apart and logs a warning on
+// every request.
+app.set('trust proxy', 1);
+
 // ---- MIDDLEWARE ----
 // "Middleware" runs on every request before it reaches your routes below.
 // Only let our own deployed frontend call this API - not any random website.
