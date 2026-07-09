@@ -361,8 +361,15 @@ button.file-btn:active {
   border-radius: 3px;
 }
 
-.lift-btn {
+.lift-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 10px;
+}
+
+.lift-btn {
   background: transparent;
   border: 1px solid var(--teal);
   color: var(--teal);
@@ -377,6 +384,43 @@ button.file-btn:active {
 .lift-btn:hover {
   background: var(--teal);
   color: var(--parchment);
+}
+.lift-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  background: transparent;
+  color: var(--teal);
+}
+
+.vote-checks {
+  display: flex;
+  gap: 4px;
+}
+
+.vote-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(43, 69, 71, 0.4);
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 1;
+  color: transparent;
+  background: transparent;
+}
+.vote-check.filled {
+  background: #2e7d32;
+  border-color: #2e7d32;
+  color: #fff;
+}
+
+.vote-hint {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b6455;
 }
 
 .empty {

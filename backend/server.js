@@ -144,6 +144,43 @@ app.post('/api/bans', requireGroupSecret, async (req, res) => {
   }
 });
 
+// How many unique players have to vote before a ban actually gets lifted.
+const VOTES_REQUIRED_TO_LIFT = 3;
+
+// POST /api/bans/:id/votes - cast one vote to lift a ban. Each player can
+// only vote once per ban. Once enough unique players have voted, the ban
+// is removed for real.
+app.post('/api/bans/:id/votes', requireGroupSecret, async (req, res) => {
+  try {
+    const voter = (req.body.voter || '').trim();
+    if (!voter) {
+      return res.status(400).json({ error: 'voter is required.' });
+    }
+
+    const ban = await Ban.findById(req.params.id);
+    if (!ban) {
+      return res.status(404).json({ error: 'Ban not found.' });
+    }
+
+    const alreadyVoted = ban.liftVotes.some((v) => v.toLowerCase() === voter.toLowerCase());
+    if (alreadyVoted) {
+      return res.status(409).json({ error: 'You already voted to lift this ban.' });
+    }
+
+    ban.liftVotes.push(voter);
+
+    if (ban.liftVotes.length >= VOTES_REQUIRED_TO_LIFT) {
+      await ban.deleteOne();
+      return res.status(204).send(); // enough votes - the ban is gone
+    }
+
+    await ban.save();
+    res.json(ban); // not enough votes yet - send back the updated vote count
+  } catch (err) {
+    res.status(500).json({ error: 'Could not record vote.' });
+  }
+});
+
 // DELETE /api/bans/:id - remove one ban by its database ID.
 // ":id" is a "route parameter" - whatever the caller puts there is available as req.params.id
 app.delete('/api/bans/:id', requireGroupSecret, async (req, res) => {

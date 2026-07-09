@@ -23,6 +23,10 @@ const GROUP_SECRET = import.meta.env.VITE_GROUP_SECRET || '';
 // don't have to re-enter it every visit.
 const CURRENT_USER_KEY = 'banListCurrentUser';
 
+// How many different players have to click "Lift This Ban" before it's
+// actually removed - matches VOTES_REQUIRED_TO_LIFT on the backend.
+const VOTES_REQUIRED_TO_LIFT = 3;
+
 function App() {
   // ---- STATE ----
   // "State" is just data that React watches. When state changes,
@@ -176,18 +180,37 @@ function App() {
     }
   }
 
-  // Runs when someone clicks "Lift This Ban" on a specific case.
-  async function liftBan(id) {
+  // Runs when someone clicks "Lift This Ban" on a specific case. This doesn't
+  // remove the ban outright - it casts one vote, and only once enough unique
+  // players have voted does the backend actually delete it.
+  async function voteLift(id) {
+    if (!currentUser) return;
+
     try {
-      const response = await fetch(`${API_URL}/api/bans/${id}`, {
-        method: 'DELETE',
-        headers: { 'x-group-secret': GROUP_SECRET },
+      const response = await fetch(`${API_URL}/api/bans/${id}/votes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-group-secret': GROUP_SECRET,
+        },
+        body: JSON.stringify({ voter: currentUser.name }),
       });
-      if (!response.ok) throw new Error('Failed to lift ban');
-      // Remove it from local state immediately, instead of waiting on a re-fetch
-      setBans((prev) => prev.filter((ban) => ban._id !== id));
+
+      if (response.status === 409) {
+        setError("You've already voted to lift this ban.");
+        return;
+      }
+      if (!response.ok) throw new Error('Failed to record vote');
+
+      if (response.status === 204) {
+        // Enough votes were cast - the ban is gone for real.
+        setBans((prev) => prev.filter((ban) => ban._id !== id));
+      } else {
+        const updated = await response.json();
+        setBans((prev) => prev.map((ban) => (ban._id === id ? updated : ban)));
+      }
     } catch (err) {
-      setError('Could not lift the ban. Try again.');
+      setError('Could not record your vote. Try again.');
     }
   }
 
@@ -317,24 +340,51 @@ function App() {
             <div className="empty">The docket is empty. Nobody has been banned—yet.</div>
           )}
 
-          {bans.map((ban, index) => (
-            <div className="case" key={ban._id}>
-              <div className="stamp">Banned</div>
-              <div className="case-number">
-                Case No. {String(bans.length - index).padStart(3, '0')} · Filed {formatDate(ban.createdAt)}
+          {bans.map((ban, index) => {
+            const votes = ban.liftVotes || [];
+            const hasVoted = currentUser
+              ? votes.some((v) => v.toLowerCase() === currentUser.name.toLowerCase())
+              : false;
+
+            return (
+              <div className="case" key={ban._id}>
+                <div className="stamp">Banned</div>
+                <div className="case-number">
+                  Case No. {String(bans.length - index).padStart(3, '0')} · Filed {formatDate(ban.createdAt)}
+                </div>
+                <div className="case-champion">{ban.champion}</div>
+                <div className="case-detail">
+                  <b>{ban.bannedFrom}</b> is forbidden from playing this champion.
+                  <br />
+                  Filed by <b>{ban.bannedBy}</b>
+                  {ban.reason && <> — "{ban.reason}"</>}
+                </div>
+                <div className="lift-row">
+                  <button
+                    className="lift-btn"
+                    onClick={() => voteLift(ban._id)}
+                    disabled={!currentUser || hasVoted}
+                    title={!currentUser ? 'Log in to vote to lift this ban' : undefined}
+                  >
+                    {hasVoted ? 'Vote Recorded' : 'Lift This Ban'}
+                  </button>
+                  <div className="vote-checks">
+                    {Array.from({ length: VOTES_REQUIRED_TO_LIFT }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`vote-check${i < votes.length ? ' filled' : ''}`}
+                      >
+                        ✓
+                      </span>
+                    ))}
+                  </div>
+                  <span className="vote-hint">
+                    {votes.length}/{VOTES_REQUIRED_TO_LIFT} votes to lift
+                  </span>
+                </div>
               </div>
-              <div className="case-champion">{ban.champion}</div>
-              <div className="case-detail">
-                <b>{ban.bannedFrom}</b> is forbidden from playing this champion.
-                <br />
-                Filed by <b>{ban.bannedBy}</b>
-                {ban.reason && <> — "{ban.reason}"</>}
-              </div>
-              <button className="lift-btn" onClick={() => liftBan(ban._id)}>
-                Lift This Ban
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

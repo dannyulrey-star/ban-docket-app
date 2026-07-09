@@ -32,6 +32,10 @@ const banSchema = new mongoose.Schema({
     type: Date,
     default: Date.now, // automatically set to "right now" when a ban is created
   },
+  liftVotes: {
+    type: [String], // names of players who've voted to lift this ban - no repeats
+    default: [],
+  },
 });
 
 // This line turns the schema into a "Model" - an object we can actually use
