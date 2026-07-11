@@ -102,8 +102,7 @@ body {
   margin-bottom: 10px;
 }
 
-.identity-btn,
-.switch-btn {
+.identity-btn {
   width: 100%;
   font-family: inherit;
   font-size: 12px;
@@ -112,9 +111,6 @@ body {
   padding: 9px 12px;
   border-radius: 3px;
   cursor: pointer;
-}
-
-.identity-btn {
   background: var(--gold);
   color: var(--ink);
   border: 1px solid rgba(0, 0, 0, 0.3);
@@ -126,16 +122,6 @@ body {
 .identity-btn:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-.switch-btn {
-  background: transparent;
-  border: 1px solid var(--cyan);
-  color: var(--cyan-bright);
-}
-.switch-btn:hover {
-  background: var(--cyan);
-  color: var(--ink);
 }
 
 .identity-error {

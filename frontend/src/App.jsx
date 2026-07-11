@@ -85,11 +85,6 @@ function App() {
     setIdentityError('');
   }
 
-  function logout() {
-    setCurrentUser(null);
-    localStorage.removeItem(CURRENT_USER_KEY);
-  }
-
   // Runs when the "Continue" button in the sidebar is submitted.
   async function handleIdentitySubmit(e) {
     e.preventDefault();
@@ -275,16 +270,11 @@ function App() {
         <div className="identity-panel">
           <div className="identity-title">Summoner Log In</div>
           {currentUser ? (
-            <>
-              <div className="identity-current">
-                Logged in as
-                <br />
-                <b>{currentUser.name}</b>
-              </div>
-              <button type="button" className="switch-btn" onClick={logout}>
-                Not you? Switch
-              </button>
-            </>
+            <div className="identity-current">
+              Logged in as
+              <br />
+              <b>{currentUser.name}</b>
+            </div>
           ) : (
             <form onSubmit={handleIdentitySubmit} className="identity-form">
               <label htmlFor="playerName">Enter your summoner name</label>
