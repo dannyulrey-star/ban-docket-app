@@ -8,6 +8,10 @@
 import { useState, useEffect } from 'react';
 import { CHAMPIONS } from './champions';
 
+// Sorted once, alphabetically, so the champion suggestion list is always in
+// a predictable order regardless of how champions.js happens to list them.
+const SORTED_CHAMPIONS = [...CHAMPIONS].sort((a, b) => a.localeCompare(b));
+
 // This is the address of your backend API.
 // While developing on your own computer, it points at localhost.
 // Once deployed, you'll set VITE_API_URL to your real Render URL
@@ -41,6 +45,19 @@ function App() {
   const [bannedFrom, setBannedFrom] = useState('');
   const [bannedBy, setBannedBy] = useState('');
   const [reason, setReason] = useState('');
+
+  // ---- CHAMPION AUTOCOMPLETE STATE ----
+  const [championOpen, setChampionOpen] = useState(false);
+  const [championHighlight, setChampionHighlight] = useState(-1);
+  const [championError, setChampionError] = useState(false);
+
+  const championMatches = champion.trim() === ''
+    ? SORTED_CHAMPIONS
+    : SORTED_CHAMPIONS.filter((name) => name.toLowerCase().includes(champion.trim().toLowerCase()));
+
+  const validChampion = SORTED_CHAMPIONS.find(
+    (name) => name.toLowerCase() === champion.trim().toLowerCase()
+  );
 
   // ---- "WHO AM I" IDENTITY STATE ----
   const [users, setUsers] = useState([]);           // every name that's ever been claimed
@@ -145,11 +162,43 @@ function App() {
     }
   }
 
+  // Picks a champion from the suggestion list - snaps to its canonical
+  // casing, in case the user typed it in a different case.
+  function selectChampion(name) {
+    setChampion(name);
+    setChampionOpen(false);
+    setChampionHighlight(-1);
+    setChampionError(false);
+  }
+
+  // Lets arrow keys move through the suggestion list and Enter pick the
+  // highlighted one, without submitting the form early.
+  function handleChampionKeyDown(e) {
+    if (!championOpen || championMatches.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setChampionHighlight((prev) => Math.min(prev + 1, championMatches.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setChampionHighlight((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && championHighlight >= 0) {
+      e.preventDefault();
+      selectChampion(championMatches[championHighlight]);
+    } else if (e.key === 'Escape') {
+      setChampionOpen(false);
+    }
+  }
+
   // Runs when the "File Ban" form is submitted.
   async function handleSubmit(e) {
     e.preventDefault(); // stops the browser from doing a full page reload on submit
 
-    if (!champion.trim() || !bannedFrom.trim() || !bannedBy.trim()) return;
+    if (!validChampion) {
+      setChampionError(true);
+      return;
+    }
+    if (!bannedFrom.trim() || !bannedBy.trim()) return;
 
     try {
       const response = await fetch(`${API_URL}/api/bans`, {
@@ -158,13 +207,14 @@ function App() {
           'Content-Type': 'application/json',
           'x-group-secret': GROUP_SECRET,
         },
-        body: JSON.stringify({ champion, bannedFrom, bannedBy, reason }),
+        body: JSON.stringify({ champion: validChampion, bannedFrom, bannedBy, reason }),
       });
       if (!response.ok) throw new Error('Failed to file ban');
 
       // Clear the form fields after a successful submit - "Filed By" stays as-is,
       // since it's tied to whoever's logged in, not something you retype each time.
       setChampion('');
+      setChampionError(false);
       setBannedFrom('');
       setReason('');
 
@@ -319,22 +369,47 @@ function App() {
           <form onSubmit={handleSubmit}>
             <div className="form-title">File a New Ban</div>
             <div className="row">
-              <div>
+              <div className="champion-field">
                 <label htmlFor="champion">Champion</label>
                 <input
                   id="champion"
-                  list="champion-options"
                   placeholder="Start typing a champion..."
                   autoComplete="off"
                   value={champion}
-                  onChange={(e) => setChampion(e.target.value)}
+                  onChange={(e) => {
+                    setChampion(e.target.value);
+                    setChampionOpen(true);
+                    setChampionHighlight(-1);
+                    setChampionError(false);
+                  }}
+                  onFocus={() => setChampionOpen(true)}
+                  onBlur={() => {
+                    setChampionOpen(false);
+                    setChampionError(champion.trim() !== '' && !validChampion);
+                  }}
+                  onKeyDown={handleChampionKeyDown}
                   required
                 />
-                <datalist id="champion-options">
-                  {CHAMPIONS.map((name) => (
-                    <option value={name} key={name} />
-                  ))}
-                </datalist>
+                {championOpen && championMatches.length > 0 && (
+                  <ul className="champion-suggestions">
+                    {championMatches.map((name, i) => (
+                      <li
+                        key={name}
+                        className={`champion-suggestion${i === championHighlight ? ' active' : ''}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectChampion(name);
+                        }}
+                        onMouseEnter={() => setChampionHighlight(i)}
+                      >
+                        {name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {championError && (
+                  <div className="field-error">Pick a champion from the list.</div>
+                )}
               </div>
               <div>
                 <label htmlFor="bannedFrom">Banned From (Summoner)</label>
@@ -363,7 +438,13 @@ function App() {
               </div>
             </div>
             <div className="submit-row">
-              <button type="submit" className="file-btn">File Ban</button>
+              <button
+                type="submit"
+                className="file-btn"
+                disabled={champion.trim() !== '' && !validChampion}
+              >
+                File Ban
+              </button>
             </div>
           </form>
         ) : (

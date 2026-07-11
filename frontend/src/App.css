@@ -290,6 +290,53 @@ button.file-btn:hover {
 button.file-btn:active {
   transform: scale(0.97);
 }
+button.file-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  background: var(--gold);
+  transform: none;
+}
+
+.champion-field {
+  position: relative;
+}
+
+.champion-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  box-shadow: 0 8px 20px var(--shadow);
+}
+
+.champion-suggestion {
+  padding: 7px 10px;
+  font-size: 13px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--gold-bright);
+}
+
+.champion-suggestion.active,
+.champion-suggestion:hover {
+  background: var(--cyan);
+  color: var(--ink);
+}
+
+.field-error {
+  color: var(--red-bright);
+  font-size: 11px;
+  margin-top: 4px;
+}
 
 .entries {
   display: flex;
