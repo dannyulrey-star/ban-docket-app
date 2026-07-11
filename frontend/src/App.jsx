@@ -273,7 +273,7 @@ function App() {
     <div className="page">
       <aside className="sidebar">
         <div className="identity-panel">
-          <div className="identity-title">Banner Log In</div>
+          <div className="identity-title">Summoner Log In</div>
           {currentUser ? (
             <>
               <div className="identity-current">
@@ -287,7 +287,7 @@ function App() {
             </>
           ) : (
             <form onSubmit={handleIdentitySubmit} className="identity-form">
-              <label htmlFor="playerName">Enter your name</label>
+              <label htmlFor="playerName">Enter your summoner name</label>
               <input
                 id="playerName"
                 placeholder="e.g. Jake"
@@ -301,7 +301,7 @@ function App() {
               </button>
               {identityError && <div className="identity-error">{identityError}</div>}
               <p className="identity-hint">
-                First time? This claims your name. Used it before? Type it again to log back in.
+                First time? This claims your summoner name. Used it before? Type it again to log back in.
               </p>
             </form>
           )}
@@ -310,9 +310,9 @@ function App() {
 
       <div className="wrap">
         <header>
-          <div className="eyebrow">Est. this friend group · No appeals</div>
+          <div className="eyebrow">Summoner's Rift · No Appeals</div>
           <h1>THE BAN LIST</h1>
-          <p className="subtitle">Whoever files it, the group must honor it.</p>
+          <p className="subtitle">Whoever files it, the Rift must honor it.</p>
         </header>
 
         <div className="docket-count">
@@ -347,7 +347,7 @@ function App() {
                 </datalist>
               </div>
               <div>
-                <label htmlFor="bannedFrom">Banned From (player)</label>
+                <label htmlFor="bannedFrom">Banned From (Summoner)</label>
                 <input
                   id="bannedFrom"
                   placeholder="e.g. Jake"
@@ -359,7 +359,7 @@ function App() {
             </div>
             <div className="row">
               <div>
-                <label htmlFor="bannedBy">Filed By (player)</label>
+                <label htmlFor="bannedBy">Filed By (Summoner)</label>
                 <input id="bannedBy" value={bannedBy} readOnly />
               </div>
               <div>
@@ -378,7 +378,7 @@ function App() {
           </form>
         ) : (
           <div className="login-required">
-            Enter your name on the left before you can file a ban.
+            Enter your summoner name on the left before you can file a ban.
           </div>
         )}
 

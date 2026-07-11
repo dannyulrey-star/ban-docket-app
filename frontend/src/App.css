@@ -1,12 +1,15 @@
 :root {
-  --ink: #1b1d24;
-  --parchment: #ece3cf;
-  --parchment-dark: #d9cba8;
-  --blood: #8f2d2d;
-  --blood-bright: #b23a3a;
-  --gold: #b8933f;
-  --teal: #2c4547;
-  --shadow: rgba(0, 0, 0, 0.35);
+  --ink: #0a1428;
+  --panel: #1e2328;
+  --panel-edge: #3c3c41;
+  --gold: #c8aa6e;
+  --gold-bright: #f0e6d2;
+  --gold-dim: rgba(200, 170, 110, 0.35);
+  --cyan: #0ac8b9;
+  --cyan-bright: #5de6d9;
+  --red: #c8402a;
+  --red-bright: #e8483a;
+  --shadow: rgba(0, 0, 0, 0.55);
 }
 
 * {
@@ -16,10 +19,10 @@
 body {
   margin: 0;
   background: var(--ink);
-  background-image: radial-gradient(circle at 20% 10%, rgba(184, 147, 63, 0.06), transparent 40%),
-    radial-gradient(circle at 80% 90%, rgba(143, 45, 45, 0.08), transparent 45%);
-  color: var(--parchment);
-  font-family: 'Courier New', Courier, monospace;
+  background-image: radial-gradient(circle at 15% 8%, rgba(200, 170, 110, 0.08), transparent 42%),
+    radial-gradient(circle at 85% 92%, rgba(10, 200, 185, 0.07), transparent 48%);
+  color: var(--gold-bright);
+  font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   min-height: 100vh;
 }
 
@@ -64,14 +67,15 @@ body {
 }
 
 .identity-panel {
-  background: linear-gradient(180deg, rgba(236, 227, 207, 0.06), rgba(236, 227, 207, 0.02));
-  border: 1px solid rgba(184, 147, 63, 0.4);
+  background: linear-gradient(180deg, rgba(200, 170, 110, 0.09), rgba(30, 35, 40, 0.4));
+  border: 1px solid var(--gold-dim);
   border-radius: 4px;
   padding: 16px;
 }
 
 .identity-title {
-  font-family: Georgia, serif;
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -86,7 +90,7 @@ body {
 }
 
 .identity-current b {
-  color: var(--gold);
+  color: var(--cyan-bright);
   font-size: 16px;
 }
 
@@ -111,13 +115,13 @@ body {
 }
 
 .identity-btn {
-  background: var(--blood);
-  color: var(--parchment);
+  background: var(--gold);
+  color: var(--ink);
   border: 1px solid rgba(0, 0, 0, 0.3);
   font-weight: 700;
 }
 .identity-btn:hover {
-  background: var(--blood-bright);
+  background: var(--gold-bright);
 }
 .identity-btn:disabled {
   opacity: 0.6;
@@ -126,23 +130,23 @@ body {
 
 .switch-btn {
   background: transparent;
-  border: 1px solid var(--teal);
-  color: #fff;
+  border: 1px solid var(--cyan);
+  color: var(--cyan-bright);
 }
 .switch-btn:hover {
-  background: var(--teal);
-  color: #fff;
+  background: var(--cyan);
+  color: var(--ink);
 }
 
 .identity-error {
-  color: var(--blood-bright);
+  color: var(--red-bright);
   font-size: 12px;
   margin-top: 8px;
 }
 
 .identity-hint {
   font-size: 11px;
-  color: var(--parchment-dark);
+  color: rgba(240, 230, 210, 0.55);
   font-style: italic;
   line-height: 1.4;
   margin: 10px 0 0;
@@ -152,9 +156,9 @@ body {
   text-align: center;
   padding: 24px 20px;
   margin: 12px 0 30px;
-  color: var(--parchment-dark);
+  color: rgba(240, 230, 210, 0.55);
   font-style: italic;
-  border: 1px dashed rgba(184, 147, 63, 0.3);
+  border: 1px dashed var(--gold-dim);
   border-radius: 4px;
 }
 
@@ -173,21 +177,22 @@ header {
 .eyebrow {
   letter-spacing: 0.35em;
   font-size: 11px;
-  color: var(--gold);
+  color: var(--cyan-bright);
   text-transform: uppercase;
 }
 
 h1 {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 900;
+  font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+  font-weight: 800;
   font-size: 44px;
   letter-spacing: 0.02em;
   margin: 6px 0 4px;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+  color: var(--gold-bright);
+  text-shadow: 0 0 18px rgba(200, 170, 110, 0.35), 2px 2px 0 rgba(0, 0, 0, 0.5);
 }
 
 .subtitle {
-  color: var(--parchment-dark);
+  color: rgba(240, 230, 210, 0.6);
   font-size: 13px;
   font-style: italic;
   margin: 0;
@@ -202,9 +207,9 @@ h1 {
 }
 
 .error-banner {
-  background: rgba(143, 45, 45, 0.2);
-  border: 1px solid var(--blood);
-  color: var(--parchment);
+  background: rgba(200, 64, 42, 0.2);
+  border: 1px solid var(--red);
+  color: var(--gold-bright);
   padding: 10px 14px;
   border-radius: 4px;
   font-size: 13px;
@@ -213,15 +218,16 @@ h1 {
 }
 
 form {
-  background: linear-gradient(180deg, rgba(236, 227, 207, 0.06), rgba(236, 227, 207, 0.02));
-  border: 1px solid rgba(184, 147, 63, 0.4);
+  background: linear-gradient(180deg, rgba(200, 170, 110, 0.09), rgba(30, 35, 40, 0.4));
+  border: 1px solid var(--gold-dim);
   border-radius: 4px;
   padding: 20px;
   margin: 12px 0 30px;
 }
 
 .form-title {
-  font-family: Georgia, serif;
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -247,15 +253,15 @@ label {
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--parchment-dark);
+  color: rgba(240, 230, 210, 0.55);
   margin-bottom: 4px;
 }
 
 input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(184, 147, 63, 0.3);
-  color: var(--parchment);
+  background: rgba(5, 10, 20, 0.55);
+  border: 1px solid var(--gold-dim);
+  color: var(--gold-bright);
   font-family: inherit;
   font-size: 14px;
   padding: 9px 10px;
@@ -263,12 +269,12 @@ input {
 }
 
 input::placeholder {
-  color: rgba(236, 227, 207, 0.35);
+  color: rgba(240, 230, 210, 0.3);
 }
 
 input:focus,
 button:focus {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--cyan);
   outline-offset: 1px;
 }
 
@@ -279,10 +285,10 @@ button:focus {
 }
 
 button.file-btn {
-  background: var(--blood);
-  color: var(--parchment);
+  background: var(--gold);
+  color: var(--ink);
   border: 1px solid rgba(0, 0, 0, 0.3);
-  font-family: Georgia, serif;
+  font-family: 'Cinzel', Georgia, serif;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -293,7 +299,7 @@ button.file-btn {
   transition: transform 0.08s ease, background 0.15s ease;
 }
 button.file-btn:hover {
-  background: var(--blood-bright);
+  background: var(--gold-bright);
 }
 button.file-btn:active {
   transform: scale(0.97);
@@ -307,12 +313,14 @@ button.file-btn:active {
 
 .case {
   position: relative;
-  background: var(--parchment);
-  color: var(--ink);
+  background: var(--panel);
+  color: var(--gold-bright);
+  border: 1px solid var(--panel-edge);
   border-radius: 2px;
   padding: 18px 20px;
   box-shadow: 0 6px 14px var(--shadow);
   overflow: hidden;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
 }
 
 .case::before {
@@ -322,44 +330,46 @@ button.file-btn:active {
   top: 0;
   bottom: 0;
   width: 6px;
-  background: var(--blood);
+  background: var(--gold);
 }
 
 .case-number {
   font-size: 10px;
   letter-spacing: 0.1em;
-  color: #6b6455;
+  color: rgba(240, 230, 210, 0.45);
   text-transform: uppercase;
 }
 
 .case-champion {
-  font-family: Georgia, serif;
-  font-weight: 800;
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 700;
   font-size: 22px;
   margin: 2px 0 8px;
+  color: var(--gold-bright);
 }
 
 .case-detail {
   font-size: 13px;
   line-height: 1.5;
+  color: rgba(240, 230, 210, 0.85);
 }
 .case-detail b {
-  color: var(--blood);
+  color: var(--cyan-bright);
 }
 
 .stamp {
   position: absolute;
   top: 14px;
   right: 18px;
-  border: 3px solid var(--blood);
-  color: var(--blood);
-  font-family: Georgia, serif;
-  font-weight: 900;
+  border: 3px solid var(--red);
+  color: var(--red-bright);
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 800;
   letter-spacing: 0.1em;
   font-size: 15px;
   padding: 4px 10px;
   transform: rotate(9deg);
-  opacity: 0.85;
+  opacity: 0.9;
   border-radius: 3px;
 }
 
@@ -378,7 +388,7 @@ button.file-btn:active {
   gap: 10px;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px dashed rgba(107, 100, 85, 0.3);
+  border-top: 1px dashed var(--panel-edge);
 }
 
 .status-badge {
@@ -392,26 +402,26 @@ button.file-btn:active {
 
 .status-pending {
   color: var(--gold);
-  border-color: rgba(184, 147, 63, 0.5);
-  background: rgba(184, 147, 63, 0.08);
+  border-color: var(--gold-dim);
+  background: rgba(200, 170, 110, 0.08);
 }
 
 .status-approved {
-  color: #2e7d32;
-  border-color: #2e7d32;
-  background: rgba(46, 125, 50, 0.08);
+  color: var(--cyan-bright);
+  border-color: var(--cyan);
+  background: rgba(10, 200, 185, 0.08);
 }
 
 .status-expired {
-  color: var(--blood);
-  border-color: var(--blood);
-  background: rgba(143, 45, 45, 0.08);
+  color: var(--red-bright);
+  border-color: var(--red);
+  background: rgba(200, 64, 42, 0.08);
 }
 
 .approve-btn {
   background: transparent;
-  border: 1px solid var(--blood);
-  color: var(--blood);
+  border: 1px solid var(--gold);
+  color: var(--gold);
   font-family: inherit;
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -421,14 +431,14 @@ button.file-btn:active {
   cursor: pointer;
 }
 .approve-btn:hover {
-  background: var(--blood);
-  color: var(--parchment);
+  background: var(--gold);
+  color: var(--ink);
 }
 .approve-btn:disabled {
   opacity: 0.5;
   cursor: default;
   background: transparent;
-  color: var(--blood);
+  color: var(--gold);
 }
 
 .lift-row {
@@ -441,8 +451,8 @@ button.file-btn:active {
 
 .lift-btn {
   background: transparent;
-  border: 1px solid var(--teal);
-  color: var(--teal);
+  border: 1px solid var(--cyan);
+  color: var(--cyan-bright);
   font-family: inherit;
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -452,14 +462,14 @@ button.file-btn:active {
   cursor: pointer;
 }
 .lift-btn:hover {
-  background: var(--teal);
-  color: var(--parchment);
+  background: var(--cyan);
+  color: var(--ink);
 }
 .lift-btn:disabled {
   opacity: 0.5;
   cursor: default;
   background: transparent;
-  color: var(--teal);
+  color: var(--cyan-bright);
 }
 
 .vote-checks {
@@ -473,7 +483,7 @@ button.file-btn:active {
   justify-content: center;
   width: 18px;
   height: 18px;
-  border: 1px solid rgba(43, 69, 71, 0.4);
+  border: 1px solid var(--panel-edge);
   border-radius: 3px;
   font-size: 12px;
   line-height: 1;
@@ -481,23 +491,23 @@ button.file-btn:active {
   background: transparent;
 }
 .vote-check.filled {
-  background: #2e7d32;
-  border-color: #2e7d32;
-  color: #fff;
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: var(--ink);
 }
 
 .vote-hint {
   font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #6b6455;
+  color: rgba(240, 230, 210, 0.45);
 }
 
 .empty {
   text-align: center;
   padding: 40px 20px;
-  color: var(--parchment-dark);
+  color: rgba(240, 230, 210, 0.55);
   font-style: italic;
-  border: 1px dashed rgba(184, 147, 63, 0.3);
+  border: 1px dashed var(--gold-dim);
   border-radius: 4px;
 }
