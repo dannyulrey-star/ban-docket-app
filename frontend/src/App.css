@@ -363,6 +363,14 @@ button.file-btn:active {
   border-radius: 3px;
 }
 
+.stamp-pending {
+  top: 54px;
+  border-color: var(--gold);
+  color: var(--gold);
+  font-size: 11px;
+  transform: rotate(-6deg);
+}
+
 .approval-row {
   display: flex;
   align-items: center;

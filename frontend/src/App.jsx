@@ -399,6 +399,9 @@ function App() {
             return (
               <div className="case" key={ban._id}>
                 <div className="stamp">Banned</div>
+                {ban.status === 'pending' && (
+                  <div className="stamp stamp-pending">Pending Approval</div>
+                )}
                 <div className="case-number">
                   Case No. {String(bans.length - index).padStart(3, '0')} · Filed {formatDate(ban.createdAt)}
                 </div>
