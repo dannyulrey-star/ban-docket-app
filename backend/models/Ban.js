@@ -36,7 +36,29 @@ const banSchema = new mongoose.Schema({
     type: [String], // names of players who've voted to lift this ban - no repeats
     default: [],
   },
+  approvalDeadline: {
+    type: Date,     // one week from creation - the window to get this ban approved
+    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  },
+  approvedBy: {
+    type: String,   // name of the player who approved this ban (not the filer)
+    default: null,
+    trim: true,
+  },
+  approvedAt: {
+    type: Date,
+    default: null,
+  },
 });
+
+// A ban's "status" is derived from the fields above, not stored directly -
+// that way there's only one place that decides what pending/approved/expired means.
+banSchema.virtual('status').get(function () {
+  if (this.approvedBy) return 'approved';
+  if (this.approvalDeadline && this.approvalDeadline < new Date()) return 'expired';
+  return 'pending';
+});
+banSchema.set('toJSON', { virtuals: true });
 
 // This line turns the schema into a "Model" - an object we can actually use
 // in our code to create, find, and delete bans in the database.

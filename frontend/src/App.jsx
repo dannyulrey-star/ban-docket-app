@@ -214,9 +214,56 @@ function App() {
     }
   }
 
+  // Runs when someone clicks "Approve This Ban". A single approval (from anyone
+  // except the player who filed it) locks the ban in permanently.
+  async function approveBan(id) {
+    if (!currentUser) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/bans/${id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-group-secret': GROUP_SECRET,
+        },
+        body: JSON.stringify({ approver: currentUser.name }),
+      });
+
+      if (response.status === 403) {
+        setError('You cannot approve a ban you filed yourself.');
+        return;
+      }
+      if (response.status === 409) {
+        const body = await response.json().catch(() => ({}));
+        setError(body.error || 'This ban can no longer be approved.');
+        return;
+      }
+      if (!response.ok) throw new Error('Failed to record approval');
+
+      const updated = await response.json();
+      setBans((prev) => prev.map((ban) => (ban._id === id ? updated : ban)));
+    } catch (err) {
+      setError('Could not record the approval. Try again.');
+    }
+  }
+
   function formatDate(dateString) {
     const d = new Date(dateString);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // Turns an approval deadline into a short human countdown, e.g. "3d 4h left".
+  function timeRemaining(deadline) {
+    const diffMs = new Date(deadline).getTime() - Date.now();
+    if (diffMs <= 0) return 'Expired';
+
+    const totalHours = Math.floor(diffMs / (60 * 60 * 1000));
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (hours > 0) return `${hours}h left`;
+    return 'Less than 1h left';
   }
 
   // ---- WHAT ACTUALLY GETS DRAWN ON SCREEN ----
@@ -345,6 +392,9 @@ function App() {
             const hasVoted = currentUser
               ? votes.some((v) => v.toLowerCase() === currentUser.name.toLowerCase())
               : false;
+            const isOwnBan = currentUser
+              ? currentUser.name.toLowerCase() === ban.bannedBy.toLowerCase()
+              : false;
 
             return (
               <div className="case" key={ban._id}>
@@ -358,6 +408,39 @@ function App() {
                   <br />
                   Filed by <b>{ban.bannedBy}</b>
                   {ban.reason && <> — "{ban.reason}"</>}
+                </div>
+                <div className="approval-row">
+                  {ban.status === 'approved' && (
+                    <span className="status-badge status-approved">
+                      Approved by {ban.approvedBy}
+                    </span>
+                  )}
+                  {ban.status === 'expired' && (
+                    <span className="status-badge status-expired">
+                      Expired — never approved
+                    </span>
+                  )}
+                  {ban.status === 'pending' && (
+                    <>
+                      <button
+                        className="approve-btn"
+                        onClick={() => approveBan(ban._id)}
+                        disabled={!currentUser || isOwnBan}
+                        title={
+                          !currentUser
+                            ? 'Log in to approve this ban'
+                            : isOwnBan
+                            ? "You can't approve a ban you filed"
+                            : undefined
+                        }
+                      >
+                        Approve This Ban
+                      </button>
+                      <span className="status-badge status-pending">
+                        {timeRemaining(ban.approvalDeadline)}
+                      </span>
+                    </>
+                  )}
                 </div>
                 <div className="lift-row">
                   <button

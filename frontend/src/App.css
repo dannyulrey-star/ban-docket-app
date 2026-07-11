@@ -363,6 +363,66 @@ button.file-btn:active {
   border-radius: 3px;
 }
 
+.approval-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(107, 100, 85, 0.3);
+}
+
+.status-badge {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.status-pending {
+  color: var(--gold);
+  border-color: rgba(184, 147, 63, 0.5);
+  background: rgba(184, 147, 63, 0.08);
+}
+
+.status-approved {
+  color: #2e7d32;
+  border-color: #2e7d32;
+  background: rgba(46, 125, 50, 0.08);
+}
+
+.status-expired {
+  color: var(--blood);
+  border-color: var(--blood);
+  background: rgba(143, 45, 45, 0.08);
+}
+
+.approve-btn {
+  background: transparent;
+  border: 1px solid var(--blood);
+  color: var(--blood);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.approve-btn:hover {
+  background: var(--blood);
+  color: var(--parchment);
+}
+.approve-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  background: transparent;
+  color: var(--blood);
+}
+
 .lift-row {
   display: flex;
   align-items: center;

@@ -181,6 +181,42 @@ app.post('/api/bans/:id/votes', requireGroupSecret, async (req, res) => {
   }
 });
 
+// POST /api/bans/:id/approve - a single other player approves this ban within
+// its one-week window, making it stick around permanently (until lifted).
+// The player who filed the ban can't approve their own.
+app.post('/api/bans/:id/approve', requireGroupSecret, async (req, res) => {
+  try {
+    const approver = (req.body.approver || '').trim();
+    if (!approver) {
+      return res.status(400).json({ error: 'approver is required.' });
+    }
+
+    const ban = await Ban.findById(req.params.id);
+    if (!ban) {
+      return res.status(404).json({ error: 'Ban not found.' });
+    }
+
+    if (approver.toLowerCase() === ban.bannedBy.toLowerCase()) {
+      return res.status(403).json({ error: 'You cannot approve a ban you filed yourself.' });
+    }
+
+    if (ban.status === 'approved') {
+      return res.status(409).json({ error: 'This ban has already been approved.' });
+    }
+
+    if (ban.status === 'expired') {
+      return res.status(409).json({ error: 'The approval window for this ban has expired.' });
+    }
+
+    ban.approvedBy = approver;
+    ban.approvedAt = new Date();
+    await ban.save();
+    res.json(ban);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not record approval.' });
+  }
+});
+
 // DELETE /api/bans/:id - remove one ban by its database ID.
 // ":id" is a "route parameter" - whatever the caller puts there is available as req.params.id
 app.delete('/api/bans/:id', requireGroupSecret, async (req, res) => {
