@@ -407,9 +407,7 @@ function App() {
 
       <div className="wrap">
         <header>
-          <div className="eyebrow">Summoner's Rift · No Appeals</div>
           <h1>THE BAN LIST</h1>
-          <p className="subtitle">Whoever files it, the Rift must honor it.</p>
         </header>
 
         <div className="docket-count">

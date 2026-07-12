@@ -39,7 +39,7 @@ body {
   flex: 0 0 220px;
   position: sticky;
   top: 24px;
-  margin-top: 153px; /* lines the identity panel up with the "File a New Ban" box */
+  margin-top: 137px; /* lines the identity panel up with the "File a New Ban" box */
 }
 
 .wrap {
@@ -160,13 +160,6 @@ header {
   padding-bottom: 18px;
 }
 
-.eyebrow {
-  letter-spacing: 0.35em;
-  font-size: 11px;
-  color: var(--cyan-bright);
-  text-transform: uppercase;
-}
-
 h1 {
   font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
   font-weight: 800;
@@ -175,13 +168,6 @@ h1 {
   margin: 6px 0 4px;
   color: var(--gold-bright);
   text-shadow: 0 0 18px rgba(200, 170, 110, 0.35), 2px 2px 0 rgba(0, 0, 0, 0.5);
-}
-
-.subtitle {
-  color: rgba(240, 230, 210, 0.6);
-  font-size: 13px;
-  font-style: italic;
-  margin: 0;
 }
 
 .docket-count {
