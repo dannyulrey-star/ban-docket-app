@@ -72,6 +72,15 @@ function App() {
   const [identityError, setIdentityError] = useState('');
   const [identityBusy, setIdentityBusy] = useState(false);
 
+  // ---- "REMOVE BAN" PASSWORD PROMPT STATE ----
+  // Removing a ban outright (rather than voting to lift it) requires typing
+  // the shared group password into a confirmation prompt each time - this
+  // holds which ban that prompt is currently open for, if any.
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removePassword, setRemovePassword] = useState('');
+  const [removeError, setRemoveError] = useState('');
+  const [removeBusy, setRemoveBusy] = useState(false);
+
   // ---- LOAD BANS AND USERS WHEN THE PAGE FIRST OPENS ----
   // useEffect runs some code automatically. The empty array `[]` at the
   // end means "only run this once, right when the component first appears."
@@ -289,6 +298,54 @@ function App() {
       setBans((prev) => prev.map((ban) => (ban._id === id ? updated : ban)));
     } catch (err) {
       setError('Could not record the approval. Try again.');
+    }
+  }
+
+  // Opens the password prompt for a specific ban's "Remove Ban" button.
+  function openRemovePrompt(ban) {
+    setRemoveTarget(ban);
+    setRemovePassword('');
+    setRemoveError('');
+  }
+
+  function closeRemovePrompt() {
+    setRemoveTarget(null);
+    setRemovePassword('');
+    setRemoveError('');
+    setRemoveBusy(false);
+  }
+
+  // Runs when the password prompt is submitted. Sends whatever the user
+  // typed as the group secret - the backend rejects it with 401 if it's wrong,
+  // so there's no separate client-side password check to keep in sync.
+  async function confirmRemoveBan(e) {
+    e.preventDefault();
+    if (!removeTarget) return;
+
+    setRemoveBusy(true);
+    setRemoveError('');
+    try {
+      const response = await fetch(`${API_URL}/api/bans/${removeTarget._id}`, {
+        method: 'DELETE',
+        headers: { 'x-group-secret': removePassword },
+      });
+
+      if (response.status === 401) {
+        setRemoveError('Incorrect password.');
+        return;
+      }
+      if (!response.ok && response.status !== 404) {
+        throw new Error('Failed to remove ban');
+      }
+
+      // 404 just means it's already gone (e.g. someone else removed it first) -
+      // either way, drop it from the list on screen.
+      setBans((prev) => prev.filter((b) => b._id !== removeTarget._id));
+      closeRemovePrompt();
+    } catch (err) {
+      setRemoveError('Could not remove the ban. Try again.');
+    } finally {
+      setRemoveBusy(false);
     }
   }
 
@@ -539,11 +596,52 @@ function App() {
                     {votes.length}/{VOTES_REQUIRED_TO_LIFT} votes to lift
                   </span>
                 </div>
+                <div className="danger-row">
+                  <button
+                    type="button"
+                    className="remove-btn"
+                    onClick={() => openRemovePrompt(ban)}
+                  >
+                    Remove Ban
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {removeTarget && (
+        <div className="modal-overlay" onClick={closeRemovePrompt}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Remove Ban</div>
+            <p className="modal-text">
+              Enter the group password to permanently remove <b>{removeTarget.champion}</b>{' '}
+              ({removeTarget.bannedFrom}) from the docket. This cannot be undone.
+            </p>
+            <form onSubmit={confirmRemoveBan}>
+              <label htmlFor="removePassword">Group Password</label>
+              <input
+                id="removePassword"
+                type="password"
+                autoFocus
+                value={removePassword}
+                onChange={(e) => setRemovePassword(e.target.value)}
+                required
+              />
+              {removeError && <div className="field-error">{removeError}</div>}
+              <div className="modal-actions">
+                <button type="button" className="modal-cancel-btn" onClick={closeRemovePrompt}>
+                  Cancel
+                </button>
+                <button type="submit" className="modal-confirm-btn" disabled={removeBusy}>
+                  {removeBusy ? 'Removing…' : 'Remove Ban'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
