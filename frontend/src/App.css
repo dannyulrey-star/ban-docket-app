@@ -229,7 +229,8 @@ label {
   margin-bottom: 4px;
 }
 
-input {
+input,
+select {
   width: 100%;
   background: rgba(5, 10, 20, 0.55);
   border: 1px solid var(--gold-dim);
@@ -240,11 +241,16 @@ input {
   border-radius: 3px;
 }
 
+select {
+  cursor: pointer;
+}
+
 input::placeholder {
   color: rgba(240, 230, 210, 0.3);
 }
 
 input:focus,
+select:focus,
 button:focus {
   outline: 2px solid var(--cyan);
   outline-offset: 1px;
@@ -283,11 +289,11 @@ button.file-btn:disabled {
   transform: none;
 }
 
-.champion-field {
+.autocomplete-field {
   position: relative;
 }
 
-.champion-suggestions {
+.autocomplete-suggestions {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -304,7 +310,7 @@ button.file-btn:disabled {
   box-shadow: 0 8px 20px var(--shadow);
 }
 
-.champion-suggestion {
+.autocomplete-suggestion {
   padding: 7px 10px;
   font-size: 13px;
   border-radius: 3px;
@@ -312,8 +318,8 @@ button.file-btn:disabled {
   color: var(--gold-bright);
 }
 
-.champion-suggestion.active,
-.champion-suggestion:hover {
+.autocomplete-suggestion.active,
+.autocomplete-suggestion:hover {
   background: var(--cyan);
   color: var(--ink);
 }

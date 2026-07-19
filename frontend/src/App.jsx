@@ -31,6 +31,10 @@ const CURRENT_USER_KEY = 'banListCurrentUser';
 // actually removed - matches VOTES_REQUIRED_TO_LIFT on the backend.
 const VOTES_REQUIRED_TO_LIFT = 3;
 
+// The sentinel value for the "+ Add new name..." option in the Banned From
+// dropdown - picking it opens the add-name window instead of setting a value.
+const ADD_NEW_NAME_OPTION = '__add_new_name__';
+
 function App() {
   // ---- STATE ----
   // "State" is just data that React watches. When state changes,
@@ -71,6 +75,18 @@ function App() {
   const [nameInput, setNameInput] = useState('');     // the "enter your name" box
   const [identityError, setIdentityError] = useState('');
   const [identityBusy, setIdentityBusy] = useState(false);
+
+  // ---- "BANNED FROM" NAME LIST STATE ----
+  // Reuses the same roster of claimed player names as the login panel above,
+  // so "who can this ban target" and "who can log in" are always the same list.
+  // The field itself is a plain <select> - no free text - with a window that
+  // opens to add a brand-new name when it's not on the list yet.
+  const sortedUserNames = [...users].map((u) => u.name).sort((a, b) => a.localeCompare(b));
+
+  const [addNameOpen, setAddNameOpen] = useState(false);
+  const [addNameInput, setAddNameInput] = useState('');
+  const [addNameError, setAddNameError] = useState('');
+  const [addNameBusy, setAddNameBusy] = useState(false);
 
   // ---- "REMOVE BAN" PASSWORD PROMPT STATE ----
   // Removing a ban outright (rather than voting to lift it) requires typing
@@ -199,6 +215,57 @@ function App() {
     }
   }
 
+  // Opens the small window for typing a brand-new "Banned From" name -
+  // triggered by picking "+ Add new name..." in the dropdown.
+  function openAddNameModal() {
+    setAddNameOpen(true);
+    setAddNameInput('');
+    setAddNameError('');
+  }
+
+  function closeAddNameModal() {
+    setAddNameOpen(false);
+    setAddNameInput('');
+    setAddNameError('');
+    setAddNameBusy(false);
+  }
+
+  // Adds a brand-new name to the shared roster (the same POST used to claim
+  // a login identity), then selects it as the "Banned From" value. Anyone
+  // can do this - it's just growing the shared list, not creating an account.
+  async function submitAddName(e) {
+    e.preventDefault();
+    const trimmed = addNameInput.trim();
+    if (!trimmed) return;
+
+    setAddNameBusy(true);
+    setAddNameError('');
+    try {
+      const response = await fetch(`${API_URL}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-group-secret': GROUP_SECRET,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (response.status === 409) {
+        setAddNameError('That name is already on the list.');
+        return;
+      }
+      if (!response.ok) throw new Error('Failed to add name');
+
+      const newUser = await response.json();
+      setUsers((prev) => [...prev, newUser]);
+      setBannedFrom(newUser.name);
+      closeAddNameModal();
+    } catch (err) {
+      setAddNameError('Could not add that name. Try again.');
+    } finally {
+      setAddNameBusy(false);
+    }
+  }
+
   // Runs when the "File Ban" form is submitted.
   async function handleSubmit(e) {
     e.preventDefault(); // stops the browser from doing a full page reload on submit
@@ -207,7 +274,7 @@ function App() {
       setChampionError(true);
       return;
     }
-    if (!bannedFrom.trim() || !bannedBy.trim()) return;
+    if (!bannedFrom || !bannedBy.trim()) return;
 
     try {
       const response = await fetch(`${API_URL}/api/bans`, {
@@ -424,7 +491,7 @@ function App() {
           <form onSubmit={handleSubmit}>
             <div className="form-title">File a New Ban</div>
             <div className="row">
-              <div className="champion-field">
+              <div className="autocomplete-field">
                 <label htmlFor="champion">Champion</label>
                 <input
                   id="champion"
@@ -446,11 +513,11 @@ function App() {
                   required
                 />
                 {championOpen && championMatches.length > 0 && (
-                  <ul className="champion-suggestions">
+                  <ul className="autocomplete-suggestions">
                     {championMatches.map((name, i) => (
                       <li
                         key={name}
-                        className={`champion-suggestion${i === championHighlight ? ' active' : ''}`}
+                        className={`autocomplete-suggestion${i === championHighlight ? ' active' : ''}`}
                         onMouseDown={(e) => {
                           e.preventDefault();
                           selectChampion(name);
@@ -468,13 +535,29 @@ function App() {
               </div>
               <div>
                 <label htmlFor="bannedFrom">Banned From (Summoner)</label>
-                <input
+                <select
                   id="bannedFrom"
-                  placeholder="e.g. Jake"
                   value={bannedFrom}
-                  onChange={(e) => setBannedFrom(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === ADD_NEW_NAME_OPTION) {
+                      openAddNameModal();
+                    } else {
+                      setBannedFrom(value);
+                    }
+                  }}
                   required
-                />
+                >
+                  <option value="" disabled>
+                    Select a name...
+                  </option>
+                  {sortedUserNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                  <option value={ADD_NEW_NAME_OPTION}>+ Add new name…</option>
+                </select>
               </div>
             </div>
             <div className="row">
@@ -644,6 +727,38 @@ function App() {
                 </button>
                 <button type="submit" className="modal-confirm-btn" disabled={removeBusy}>
                   {removeBusy ? 'Removing…' : 'Remove Ban'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {addNameOpen && (
+        <div className="modal-overlay" onClick={closeAddNameModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Add a Summoner Name</div>
+            <p className="modal-text">
+              Add a new name to the "Banned From" list so anyone can pick it going forward.
+            </p>
+            <form onSubmit={submitAddName}>
+              <label htmlFor="newSummonerName">Summoner Name</label>
+              <input
+                id="newSummonerName"
+                placeholder="e.g. Jake"
+                autoFocus
+                maxLength={50}
+                value={addNameInput}
+                onChange={(e) => setAddNameInput(e.target.value)}
+                required
+              />
+              {addNameError && <div className="field-error">{addNameError}</div>}
+              <div className="modal-actions">
+                <button type="button" className="modal-cancel-btn" onClick={closeAddNameModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="modal-confirm-btn" disabled={addNameBusy}>
+                  {addNameBusy ? 'Adding…' : 'Add Name'}
                 </button>
               </div>
             </form>
