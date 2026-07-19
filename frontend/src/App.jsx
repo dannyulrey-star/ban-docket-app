@@ -31,10 +31,6 @@ const CURRENT_USER_KEY = 'banListCurrentUser';
 // actually removed - matches VOTES_REQUIRED_TO_LIFT on the backend.
 const VOTES_REQUIRED_TO_LIFT = 3;
 
-// The sentinel value for the "+ Add new name..." option in the Banned From
-// dropdown - picking it opens the add-name window instead of setting a value.
-const ADD_NEW_NAME_OPTION = '__add_new_name__';
-
 function App() {
   // ---- STATE ----
   // "State" is just data that React watches. When state changes,
@@ -79,9 +75,14 @@ function App() {
   // ---- "BANNED FROM" NAME LIST STATE ----
   // Reuses the same roster of claimed player names as the login panel above,
   // so "who can this ban target" and "who can log in" are always the same list.
-  // The field itself is a plain <select> - no free text - with a window that
-  // opens to add a brand-new name when it's not on the list yet.
+  // The field itself is a click-to-open dropdown (no free text) styled the
+  // same as the Champion field, with a window that opens to add a brand-new
+  // name when it's not on the list yet.
   const sortedUserNames = [...users].map((u) => u.name).sort((a, b) => a.localeCompare(b));
+
+  const [bannedFromOpen, setBannedFromOpen] = useState(false);
+  const [bannedFromHighlight, setBannedFromHighlight] = useState(-1);
+  const [bannedFromError, setBannedFromError] = useState(false);
 
   const [addNameOpen, setAddNameOpen] = useState(false);
   const [addNameInput, setAddNameInput] = useState('');
@@ -215,6 +216,48 @@ function App() {
     }
   }
 
+  // Picks a name from the "Banned From" dropdown.
+  function selectBannedFromName(name) {
+    setBannedFrom(name);
+    setBannedFromOpen(false);
+    setBannedFromHighlight(-1);
+    setBannedFromError(false);
+  }
+
+  // Lets arrow keys move through the "Banned From" list (plus the trailing
+  // "add new name" row) and Enter pick the highlighted one. There's no
+  // typing to filter here - it's click/keyboard select only.
+  function handleBannedFromKeyDown(e) {
+    const totalRows = sortedUserNames.length + 1; // +1 for "+ Add new name..."
+
+    if (!bannedFromOpen) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setBannedFromOpen(true);
+        setBannedFromHighlight(0);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setBannedFromHighlight((prev) => Math.min(prev + 1, totalRows - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setBannedFromHighlight((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && bannedFromHighlight >= 0) {
+      e.preventDefault();
+      if (bannedFromHighlight < sortedUserNames.length) {
+        selectBannedFromName(sortedUserNames[bannedFromHighlight]);
+      } else {
+        setBannedFromOpen(false);
+        openAddNameModal();
+      }
+    } else if (e.key === 'Escape') {
+      setBannedFromOpen(false);
+    }
+  }
+
   // Opens the small window for typing a brand-new "Banned From" name -
   // triggered by picking "+ Add new name..." in the dropdown.
   function openAddNameModal() {
@@ -274,7 +317,11 @@ function App() {
       setChampionError(true);
       return;
     }
-    if (!bannedFrom || !bannedBy.trim()) return;
+    if (!bannedFrom) {
+      setBannedFromError(true);
+      return;
+    }
+    if (!bannedBy.trim()) return;
 
     try {
       const response = await fetch(`${API_URL}/api/bans`, {
@@ -292,6 +339,7 @@ function App() {
       setChampion('');
       setChampionError(false);
       setBannedFrom('');
+      setBannedFromError(false);
       setReason('');
 
       // Re-fetch the list so the new ban shows up immediately
@@ -533,31 +581,59 @@ function App() {
                   <div className="field-error">Pick a champion from the list.</div>
                 )}
               </div>
-              <div>
+              <div className="autocomplete-field">
                 <label htmlFor="bannedFrom">Banned From (Summoner)</label>
-                <select
+                <button
+                  type="button"
                   id="bannedFrom"
-                  value={bannedFrom}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === ADD_NEW_NAME_OPTION) {
-                      openAddNameModal();
-                    } else {
-                      setBannedFrom(value);
-                    }
+                  className="autocomplete-trigger"
+                  onClick={() => {
+                    setBannedFromOpen((prev) => !prev);
+                    setBannedFromHighlight(-1);
                   }}
-                  required
+                  onBlur={() => {
+                    setBannedFromOpen(false);
+                    setBannedFromError(!bannedFrom);
+                  }}
+                  onKeyDown={handleBannedFromKeyDown}
                 >
-                  <option value="" disabled>
-                    Select a name...
-                  </option>
-                  {sortedUserNames.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                  <option value={ADD_NEW_NAME_OPTION}>+ Add new name…</option>
-                </select>
+                  <span className={bannedFrom ? '' : 'autocomplete-placeholder'}>
+                    {bannedFrom || 'Select a name...'}
+                  </span>
+                </button>
+                {bannedFromOpen && (
+                  <ul className="autocomplete-suggestions">
+                    {sortedUserNames.map((name, i) => (
+                      <li
+                        key={name}
+                        className={`autocomplete-suggestion${i === bannedFromHighlight ? ' active' : ''}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectBannedFromName(name);
+                        }}
+                        onMouseEnter={() => setBannedFromHighlight(i)}
+                      >
+                        {name}
+                      </li>
+                    ))}
+                    <li
+                      className={`autocomplete-suggestion add-new${
+                        bannedFromHighlight === sortedUserNames.length ? ' active' : ''
+                      }`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setBannedFromOpen(false);
+                        openAddNameModal();
+                      }}
+                      onMouseEnter={() => setBannedFromHighlight(sortedUserNames.length)}
+                    >
+                      + Add new name…
+                    </li>
+                  </ul>
+                )}
+                {bannedFromError && (
+                  <div className="field-error">Pick a name from the list.</div>
+                )}
               </div>
             </div>
             <div className="row">
@@ -686,8 +762,6 @@ function App() {
                   <span className="vote-hint">
                     {votes.length}/{VOTES_REQUIRED_TO_LIFT} votes to lift
                   </span>
-                </div>
-                <div className="danger-row">
                   <button
                     type="button"
                     className="remove-btn"
