@@ -1,6 +1,43 @@
 // Full list of League of Legends champions, pulled from Riot's Data Dragon API
 // (patch 16.13.1): https://ddragon.leagueoflegends.com/cdn/16.13.1/data/en_US/champion.json
 // Update this list after new champion releases by re-fetching that URL.
+const DDRAGON_VERSION = '16.13.1';
+
+// Data Dragon's per-champion image file names don't always match the display
+// name above - it strips spaces/apostrophes/periods, and a handful of
+// champions (Wukong -> MonkeyKing) use a different internal id entirely.
+// Only the exceptions are listed here; anything not in this map uses its
+// display name as-is (e.g. "Aatrox" -> "Aatrox.png").
+const CHAMPION_IMAGE_FILE_OVERRIDES = {
+  'Aurelion Sol': 'AurelionSol',
+  "Bel'Veth": 'Belveth',
+  "Cho'Gath": 'Chogath',
+  'Dr. Mundo': 'DrMundo',
+  'Jarvan IV': 'JarvanIV',
+  "K'Sante": 'KSante',
+  "Kai'Sa": 'Kaisa',
+  "Kha'Zix": 'Khazix',
+  "Kog'Maw": 'KogMaw',
+  'LeBlanc': 'Leblanc',
+  'Lee Sin': 'LeeSin',
+  'Master Yi': 'MasterYi',
+  'Miss Fortune': 'MissFortune',
+  'Nunu & Willump': 'Nunu',
+  "Rek'Sai": 'RekSai',
+  'Renata Glasc': 'Renata',
+  'Tahm Kench': 'TahmKench',
+  'Twisted Fate': 'TwistedFate',
+  "Vel'Koz": 'Velkoz',
+  'Wukong': 'MonkeyKing',
+  'Xin Zhao': 'XinZhao',
+};
+
+// Builds the Data Dragon CDN URL for a champion's square icon.
+export function championIconUrl(name) {
+  const file = CHAMPION_IMAGE_FILE_OVERRIDES[name] || name;
+  return `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/${file}.png`;
+}
+
 export const CHAMPIONS = [
   "Aatrox", "Ahri", "Akali", "Akshan", "Alistar", "Ambessa", "Amumu", "Anivia", "Annie",
   "Aphelios", "Ashe", "Aurelion Sol", "Aurora", "Azir", "Bard", "Bel'Veth", "Blitzcrank",

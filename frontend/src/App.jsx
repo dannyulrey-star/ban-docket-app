@@ -6,7 +6,7 @@
 // asks the BACKEND (server.js) for it over the internet, using "fetch".
 
 import { useState, useEffect } from 'react';
-import { CHAMPIONS } from './champions';
+import { CHAMPIONS, championIconUrl } from './champions';
 
 // Sorted once, alphabetically, so the champion suggestion list is always in
 // a predictable order regardless of how champions.js happens to list them.
@@ -531,7 +531,17 @@ function App() {
                 <div className="case-number">
                   Case No. {String(bans.length - index).padStart(3, '0')} · Filed {formatDate(ban.createdAt)}
                 </div>
-                <div className="case-champion">{ban.champion}</div>
+                <div className="case-champion">
+                  <img
+                    className="case-champion-icon"
+                    src={championIconUrl(ban.champion)}
+                    alt=""
+                    width={32}
+                    height={32}
+                    loading="lazy"
+                  />
+                  {ban.champion}
+                </div>
                 <div className="case-detail">
                   <b>{ban.bannedFrom}</b> is forbidden from playing this champion.
                   <br />
