@@ -18,15 +18,6 @@ const SORTED_CHAMPIONS = [...CHAMPIONS].sort((a, b) => a.localeCompare(b));
 // (explained in the README) and this line picks that up automatically.
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// The shared "group secret" - anyone filing or lifting a ban must send this
-// back to the backend, which checks it against its own GROUP_SECRET value.
-const GROUP_SECRET = import.meta.env.VITE_GROUP_SECRET || '';
-
-// The key we use to remember "who you are" in this browser. There's no
-// password behind this - it's just a claimed name, saved locally so you
-// don't have to re-enter it every visit.
-const CURRENT_USER_KEY = 'banListCurrentUser';
-
 // How many different players have to click "Lift This Ban" before it's
 // actually removed - matches VOTES_REQUIRED_TO_LIFT on the backend.
 const VOTES_REQUIRED_TO_LIFT = 3;
@@ -60,17 +51,12 @@ function App() {
   );
 
   // ---- "WHO AM I" IDENTITY STATE ----
-  const [users, setUsers] = useState([]);           // every name that's ever been claimed
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
-    } catch {
-      return null;
-    }
-  });
-  const [nameInput, setNameInput] = useState('');     // the "enter your name" box
-  const [identityError, setIdentityError] = useState('');
-  const [identityBusy, setIdentityBusy] = useState(false);
+  // Identity now comes from actually logging in with Discord (see
+  // fetchCurrentUser below) instead of just typing a name - currentUser is
+  // null until the backend confirms there's a valid login cookie.
+  const [users, setUsers] = useState([]);           // every name on the "Banned From" list
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false); // true once we know either way
 
   // ---- "BANNED FROM" NAME LIST STATE ----
   // Reuses the same roster of claimed player names as the login panel above,
@@ -84,17 +70,49 @@ function App() {
   const [bannedFromHighlight, setBannedFromHighlight] = useState(-1);
   const [bannedFromError, setBannedFromError] = useState(false);
 
+  // "addNameTarget" tracks which field opened this shared modal - "main" for
+  // the File a New Ban form, "watch" for the Create Ban Watch form - so the
+  // new name lands back in the right one once it's added.
   const [addNameOpen, setAddNameOpen] = useState(false);
+  const [addNameTarget, setAddNameTarget] = useState('main');
   const [addNameInput, setAddNameInput] = useState('');
   const [addNameError, setAddNameError] = useState('');
   const [addNameBusy, setAddNameBusy] = useState(false);
 
-  // ---- "REMOVE BAN" PASSWORD PROMPT STATE ----
-  // Removing a ban outright (rather than voting to lift it) requires typing
-  // the shared group password into a confirmation prompt each time - this
-  // holds which ban that prompt is currently open for, if any.
+  // ---- "BAN WATCH" STATE ----
+  // A "ban watch" is a lightweight heads-up (not an actual ban) that a
+  // player is being eyed for a champion - it just sits in the sidebar for
+  // 7 days. The create form reuses the same validated Champion/Summoner
+  // pickers as the main ban form, just with their own state.
+  const [banWatches, setBanWatches] = useState([]);
+  const [watchModalOpen, setWatchModalOpen] = useState(false);
+  const [watchBusy, setWatchBusy] = useState(false);
+  const [watchFormError, setWatchFormError] = useState('');
+
+  const [watchChampion, setWatchChampion] = useState('');
+  const [watchChampionOpen, setWatchChampionOpen] = useState(false);
+  const [watchChampionHighlight, setWatchChampionHighlight] = useState(-1);
+  const [watchChampionError, setWatchChampionError] = useState(false);
+
+  const watchChampionMatches = watchChampion.trim() === ''
+    ? SORTED_CHAMPIONS
+    : SORTED_CHAMPIONS.filter((name) => name.toLowerCase().includes(watchChampion.trim().toLowerCase()));
+
+  const validWatchChampion = SORTED_CHAMPIONS.find(
+    (name) => name.toLowerCase() === watchChampion.trim().toLowerCase()
+  );
+
+  const [watchBannedFrom, setWatchBannedFrom] = useState('');
+  const [watchBannedFromOpen, setWatchBannedFromOpen] = useState(false);
+  const [watchBannedFromHighlight, setWatchBannedFromHighlight] = useState(-1);
+  const [watchBannedFromError, setWatchBannedFromError] = useState(false);
+
+  // ---- "REMOVE BAN" CONFIRMATION STATE ----
+  // Removing a ban outright (rather than voting to lift it) asks for a plain
+  // confirmation first - this holds which ban that confirmation is currently
+  // open for, if any. It used to also require typing a shared group password,
+  // but now that logging in proves who you are, that's no longer needed.
   const [removeTarget, setRemoveTarget] = useState(null);
-  const [removePassword, setRemovePassword] = useState('');
   const [removeError, setRemoveError] = useState('');
   const [removeBusy, setRemoveBusy] = useState(false);
 
@@ -104,6 +122,8 @@ function App() {
   useEffect(() => {
     fetchBans();
     fetchUsers();
+    fetchBanWatches();
+    fetchCurrentUser();
   }, []);
 
   // Whenever the logged-in user changes, auto-fill "Filed By" with their name.
@@ -121,52 +141,37 @@ function App() {
     }
   }
 
-  function loginAs(user) {
-    setCurrentUser(user);
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    setNameInput('');
-    setIdentityError('');
+  async function fetchBanWatches() {
+    try {
+      const response = await fetch(`${API_URL}/api/ban-watches`);
+      if (!response.ok) throw new Error('Server responded with an error');
+      setBanWatches(await response.json());
+    } catch (err) {
+      // Not fatal - the sidebar list just won't show until the next successful fetch.
+    }
   }
 
-  // Runs when the "Continue" button in the sidebar is submitted.
-  async function handleIdentitySubmit(e) {
-    e.preventDefault();
-    const trimmed = nameInput.trim();
-    if (!trimmed) return;
-
-    // If this name was already claimed, just log back in as it - no need
-    // to create anything new.
-    const existing = users.find((u) => u.name.toLowerCase() === trimmed.toLowerCase());
-    if (existing) {
-      loginAs(existing);
-      return;
-    }
-
-    setIdentityBusy(true);
-    setIdentityError('');
+  // Asks the backend "is there a valid login cookie on this browser?" - runs
+  // once when the page loads, and again right after Discord sends someone
+  // back here post-login (see the "Log in with Discord" link below).
+  async function fetchCurrentUser() {
     try {
-      const response = await fetch(`${API_URL}/api/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-group-secret': GROUP_SECRET,
-        },
-        body: JSON.stringify({ name: trimmed }),
-      });
-      if (response.status === 409) {
-        setIdentityError('That name was just taken. Try another.');
-        fetchUsers();
-        return;
-      }
-      if (!response.ok) throw new Error('Failed to create user');
-
-      const newUser = await response.json();
-      setUsers((prev) => [...prev, newUser]);
-      loginAs(newUser);
+      const response = await fetch(`${API_URL}/api/auth/me`, { credentials: 'include' });
+      setCurrentUser(response.ok ? await response.json() : null);
     } catch (err) {
-      setIdentityError('Could not set up that name. Try again.');
+      setCurrentUser(null);
     } finally {
-      setIdentityBusy(false);
+      setAuthChecked(true);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      // Not fatal - the cookie will just expire on its own eventually.
+    } finally {
+      setCurrentUser(null);
     }
   }
 
@@ -251,16 +256,18 @@ function App() {
         selectBannedFromName(sortedUserNames[bannedFromHighlight]);
       } else {
         setBannedFromOpen(false);
-        openAddNameModal();
+        openAddNameModal('main');
       }
     } else if (e.key === 'Escape') {
       setBannedFromOpen(false);
     }
   }
 
-  // Opens the small window for typing a brand-new "Banned From" name -
-  // triggered by picking "+ Add new name..." in the dropdown.
-  function openAddNameModal() {
+  // Opens the small window for typing a brand-new summoner name - triggered
+  // by picking "+ Add new name..." in either the main form's or the ban
+  // watch form's dropdown. "target" says which one gets the finished name.
+  function openAddNameModal(target) {
+    setAddNameTarget(target);
     setAddNameOpen(true);
     setAddNameInput('');
     setAddNameError('');
@@ -273,9 +280,9 @@ function App() {
     setAddNameBusy(false);
   }
 
-  // Adds a brand-new name to the shared roster (the same POST used to claim
-  // a login identity), then selects it as the "Banned From" value. Anyone
-  // can do this - it's just growing the shared list, not creating an account.
+  // Adds a brand-new name to the shared "Banned From" roster, then selects
+  // it as the value. This doesn't create a login - it's just a target name
+  // for friends who get banned but don't log in with Discord themselves.
   async function submitAddName(e) {
     e.preventDefault();
     const trimmed = addNameInput.trim();
@@ -286,10 +293,8 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/api/users`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-group-secret': GROUP_SECRET,
-        },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmed }),
       });
       if (response.status === 409) {
@@ -300,12 +305,138 @@ function App() {
 
       const newUser = await response.json();
       setUsers((prev) => [...prev, newUser]);
-      setBannedFrom(newUser.name);
+      if (addNameTarget === 'watch') {
+        setWatchBannedFrom(newUser.name);
+        setWatchBannedFromError(false);
+      } else {
+        setBannedFrom(newUser.name);
+      }
       closeAddNameModal();
     } catch (err) {
       setAddNameError('Could not add that name. Try again.');
     } finally {
       setAddNameBusy(false);
+    }
+  }
+
+  // Opens the "Create Ban Watch" window with a blank form.
+  function openWatchModal() {
+    setWatchModalOpen(true);
+    setWatchChampion('');
+    setWatchChampionOpen(false);
+    setWatchChampionError(false);
+    setWatchBannedFrom('');
+    setWatchBannedFromOpen(false);
+    setWatchBannedFromError(false);
+    setWatchFormError('');
+  }
+
+  function closeWatchModal() {
+    setWatchModalOpen(false);
+    setWatchChampionOpen(false);
+    setWatchBannedFromOpen(false);
+    setWatchBusy(false);
+  }
+
+  // Picks a champion for the ban watch form - same idea as selectChampion,
+  // just against its own state.
+  function selectWatchChampion(name) {
+    setWatchChampion(name);
+    setWatchChampionOpen(false);
+    setWatchChampionHighlight(-1);
+    setWatchChampionError(false);
+  }
+
+  function handleWatchChampionKeyDown(e) {
+    if (!watchChampionOpen || watchChampionMatches.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setWatchChampionHighlight((prev) => Math.min(prev + 1, watchChampionMatches.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setWatchChampionHighlight((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && watchChampionHighlight >= 0) {
+      e.preventDefault();
+      selectWatchChampion(watchChampionMatches[watchChampionHighlight]);
+    } else if (e.key === 'Escape') {
+      setWatchChampionOpen(false);
+    }
+  }
+
+  // Picks a summoner for the ban watch form - same idea as selectBannedFromName.
+  function selectWatchBannedFromName(name) {
+    setWatchBannedFrom(name);
+    setWatchBannedFromOpen(false);
+    setWatchBannedFromHighlight(-1);
+    setWatchBannedFromError(false);
+  }
+
+  function handleWatchBannedFromKeyDown(e) {
+    const totalRows = sortedUserNames.length + 1; // +1 for "+ Add new name..."
+
+    if (!watchBannedFromOpen) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setWatchBannedFromOpen(true);
+        setWatchBannedFromHighlight(0);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setWatchBannedFromHighlight((prev) => Math.min(prev + 1, totalRows - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setWatchBannedFromHighlight((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && watchBannedFromHighlight >= 0) {
+      e.preventDefault();
+      if (watchBannedFromHighlight < sortedUserNames.length) {
+        selectWatchBannedFromName(sortedUserNames[watchBannedFromHighlight]);
+      } else {
+        setWatchBannedFromOpen(false);
+        openAddNameModal('watch');
+      }
+    } else if (e.key === 'Escape') {
+      setWatchBannedFromOpen(false);
+    }
+  }
+
+  // Runs when the "Create Ban Watch" form is submitted.
+  async function submitBanWatch(e) {
+    e.preventDefault();
+
+    if (!validWatchChampion) {
+      setWatchChampionError(true);
+      return;
+    }
+    if (!watchBannedFrom) {
+      setWatchBannedFromError(true);
+      return;
+    }
+
+    setWatchBusy(true);
+    setWatchFormError('');
+    try {
+      const response = await fetch(`${API_URL}/api/ban-watches`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          champion: validWatchChampion,
+          bannedFrom: watchBannedFrom,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to create ban watch');
+
+      const newWatch = await response.json();
+      setBanWatches((prev) => [newWatch, ...prev]);
+      closeWatchModal();
+    } catch (err) {
+      setWatchFormError('Could not create the ban watch. Try again.');
+    } finally {
+      setWatchBusy(false);
     }
   }
 
@@ -321,16 +452,14 @@ function App() {
       setBannedFromError(true);
       return;
     }
-    if (!bannedBy.trim()) return;
+    if (!currentUser) return;
 
     try {
       const response = await fetch(`${API_URL}/api/bans`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-group-secret': GROUP_SECRET,
-        },
-        body: JSON.stringify({ champion: validChampion, bannedFrom, bannedBy, reason }),
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ champion: validChampion, bannedFrom, reason }),
       });
       if (!response.ok) throw new Error('Failed to file ban');
 
@@ -358,11 +487,7 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/api/bans/${id}/votes`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-group-secret': GROUP_SECRET,
-        },
-        body: JSON.stringify({ voter: currentUser.name }),
+        credentials: 'include',
       });
 
       if (response.status === 409) {
@@ -391,11 +516,7 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/api/bans/${id}/approve`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-group-secret': GROUP_SECRET,
-        },
-        body: JSON.stringify({ approver: currentUser.name }),
+        credentials: 'include',
       });
 
       if (response.status === 403) {
@@ -416,23 +537,20 @@ function App() {
     }
   }
 
-  // Opens the password prompt for a specific ban's "Remove Ban" button.
+  // Opens the confirmation prompt for a specific ban's "Remove Ban" button.
   function openRemovePrompt(ban) {
     setRemoveTarget(ban);
-    setRemovePassword('');
     setRemoveError('');
   }
 
   function closeRemovePrompt() {
     setRemoveTarget(null);
-    setRemovePassword('');
     setRemoveError('');
     setRemoveBusy(false);
   }
 
-  // Runs when the password prompt is submitted. Sends whatever the user
-  // typed as the group secret - the backend rejects it with 401 if it's wrong,
-  // so there's no separate client-side password check to keep in sync.
+  // Runs when "Remove Ban" is confirmed in the modal. Identity comes from
+  // the login cookie server-side, so there's nothing else to send here.
   async function confirmRemoveBan(e) {
     e.preventDefault();
     if (!removeTarget) return;
@@ -442,11 +560,11 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/api/bans/${removeTarget._id}`, {
         method: 'DELETE',
-        headers: { 'x-group-secret': removePassword },
+        credentials: 'include',
       });
 
       if (response.status === 401) {
-        setRemoveError('Incorrect password.');
+        setRemoveError('Your login has expired. Please log in again.');
         return;
       }
       if (!response.ok && response.status !== 404) {
@@ -490,33 +608,62 @@ function App() {
     <div className="page">
       <aside className="sidebar">
         <div className="identity-panel">
-          <div className="identity-title">Summoner Log In</div>
+          <div className="identity-title">Log In</div>
           {currentUser ? (
             <div className="identity-current">
-              Logged in as
-              <br />
-              <b>{currentUser.name}</b>
-            </div>
-          ) : (
-            <form onSubmit={handleIdentitySubmit} className="identity-form">
-              <label htmlFor="playerName">Enter your summoner name</label>
-              <input
-                id="playerName"
-                placeholder="e.g. Jake"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                maxLength={50}
-                required
-              />
-              <button type="submit" className="identity-btn" disabled={identityBusy}>
-                {identityBusy ? 'Please wait…' : 'Continue'}
+              {currentUser.avatarUrl && (
+                <img className="identity-avatar" src={currentUser.avatarUrl} alt="" width={40} height={40} />
+              )}
+              <div>
+                Logged in as
+                <br />
+                <b>{currentUser.name}</b>
+              </div>
+              <button type="button" className="identity-logout-btn" onClick={handleLogout}>
+                Log Out
               </button>
-              {identityError && <div className="identity-error">{identityError}</div>}
+            </div>
+          ) : authChecked ? (
+            <>
+              <a className="identity-btn discord-btn" href={`${API_URL}/api/auth/discord`}>
+                Log in with Discord
+              </a>
               <p className="identity-hint">
-                First time? This claims your summoner name. Used it before? Type it again to log back in.
+                Real Riot Games login isn't available to small apps like this one, so we use your
+                Discord account to prove who you are instead.
               </p>
-            </form>
+            </>
+          ) : (
+            <p className="identity-hint">Checking login…</p>
           )}
+        </div>
+
+        <div className="watch-panel">
+          <div className="identity-title">Ban Watch</div>
+          <button
+            type="button"
+            className="identity-btn"
+            onClick={openWatchModal}
+            disabled={!currentUser}
+            title={!currentUser ? 'Log in to create a ban watch' : undefined}
+          >
+            + Create Ban Watch
+          </button>
+          <div className="watch-list">
+            {banWatches.length === 0 ? (
+              <div className="watch-empty">No ban watches in effect.</div>
+            ) : (
+              banWatches.map((watch) => (
+                <div className="watch-item" key={watch._id}>
+                  <div className="watch-champion">{watch.champion}</div>
+                  <div className="watch-detail">
+                    Watching <b>{watch.bannedFrom}</b>
+                  </div>
+                  <div className="watch-countdown">{timeRemaining(watch.expiresAt)}</div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </aside>
 
@@ -623,7 +770,7 @@ function App() {
                       onMouseDown={(e) => {
                         e.preventDefault();
                         setBannedFromOpen(false);
-                        openAddNameModal();
+                        openAddNameModal('main');
                       }}
                       onMouseEnter={() => setBannedFromHighlight(sortedUserNames.length)}
                     >
@@ -663,7 +810,7 @@ function App() {
           </form>
         ) : (
           <div className="login-required">
-            Enter your summoner name on the left before you can file a ban.
+            Log in with Discord on the left before you can file a ban.
           </div>
         )}
 
@@ -781,19 +928,10 @@ function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">Remove Ban</div>
             <p className="modal-text">
-              Enter the group password to permanently remove <b>{removeTarget.champion}</b>{' '}
-              ({removeTarget.bannedFrom}) from the docket. This cannot be undone.
+              Permanently remove <b>{removeTarget.champion}</b> ({removeTarget.bannedFrom}) from the
+              docket? This cannot be undone.
             </p>
             <form onSubmit={confirmRemoveBan}>
-              <label htmlFor="removePassword">Group Password</label>
-              <input
-                id="removePassword"
-                type="password"
-                autoFocus
-                value={removePassword}
-                onChange={(e) => setRemovePassword(e.target.value)}
-                required
-              />
               {removeError && <div className="field-error">{removeError}</div>}
               <div className="modal-actions">
                 <button type="button" className="modal-cancel-btn" onClick={closeRemovePrompt}>
@@ -808,6 +946,130 @@ function App() {
         </div>
       )}
 
+      {watchModalOpen && (
+        <div className="modal-overlay" onClick={closeWatchModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Create Ban Watch</div>
+            <p className="modal-text">
+              Flag a champion/summoner pairing for the group to keep an eye on. It stays
+              listed for 7 days.
+            </p>
+            <form onSubmit={submitBanWatch}>
+              <div className="autocomplete-field">
+                <label htmlFor="watchChampion">Champion</label>
+                <input
+                  id="watchChampion"
+                  placeholder="Start typing a champion..."
+                  autoComplete="off"
+                  value={watchChampion}
+                  onChange={(e) => {
+                    setWatchChampion(e.target.value);
+                    setWatchChampionOpen(true);
+                    setWatchChampionHighlight(-1);
+                    setWatchChampionError(false);
+                  }}
+                  onFocus={() => setWatchChampionOpen(true)}
+                  onBlur={() => {
+                    setWatchChampionOpen(false);
+                    setWatchChampionError(watchChampion.trim() !== '' && !validWatchChampion);
+                  }}
+                  onKeyDown={handleWatchChampionKeyDown}
+                  required
+                />
+                {watchChampionOpen && watchChampionMatches.length > 0 && (
+                  <ul className="autocomplete-suggestions">
+                    {watchChampionMatches.map((name, i) => (
+                      <li
+                        key={name}
+                        className={`autocomplete-suggestion${i === watchChampionHighlight ? ' active' : ''}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectWatchChampion(name);
+                        }}
+                        onMouseEnter={() => setWatchChampionHighlight(i)}
+                      >
+                        {name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {watchChampionError && (
+                  <div className="field-error">Pick a champion from the list.</div>
+                )}
+              </div>
+
+              <div className="autocomplete-field">
+                <label htmlFor="watchBannedFrom">Summoner Being Banned</label>
+                <button
+                  type="button"
+                  id="watchBannedFrom"
+                  className="autocomplete-trigger"
+                  onClick={() => {
+                    setWatchBannedFromOpen((prev) => !prev);
+                    setWatchBannedFromHighlight(-1);
+                  }}
+                  onBlur={() => {
+                    setWatchBannedFromOpen(false);
+                    setWatchBannedFromError(!watchBannedFrom);
+                  }}
+                  onKeyDown={handleWatchBannedFromKeyDown}
+                >
+                  <span className={watchBannedFrom ? '' : 'autocomplete-placeholder'}>
+                    {watchBannedFrom || 'Select a name...'}
+                  </span>
+                </button>
+                {watchBannedFromOpen && (
+                  <ul className="autocomplete-suggestions">
+                    {sortedUserNames.map((name, i) => (
+                      <li
+                        key={name}
+                        className={`autocomplete-suggestion${i === watchBannedFromHighlight ? ' active' : ''}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectWatchBannedFromName(name);
+                        }}
+                        onMouseEnter={() => setWatchBannedFromHighlight(i)}
+                      >
+                        {name}
+                      </li>
+                    ))}
+                    <li
+                      className={`autocomplete-suggestion add-new${
+                        watchBannedFromHighlight === sortedUserNames.length ? ' active' : ''
+                      }`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setWatchBannedFromOpen(false);
+                        openAddNameModal('watch');
+                      }}
+                      onMouseEnter={() => setWatchBannedFromHighlight(sortedUserNames.length)}
+                    >
+                      + Add new name…
+                    </li>
+                  </ul>
+                )}
+                {watchBannedFromError && (
+                  <div className="field-error">Pick a name from the list.</div>
+                )}
+              </div>
+
+              {watchFormError && <div className="field-error">{watchFormError}</div>}
+
+              <div className="modal-actions">
+                <button type="button" className="modal-cancel-btn" onClick={closeWatchModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="modal-confirm-btn" disabled={watchBusy}>
+                  {watchBusy ? 'Creating…' : 'Create Ban Watch'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Always rendered last so it stacks on top of the Create Ban Watch
+          modal too, since either one can trigger it. */}
       {addNameOpen && (
         <div className="modal-overlay" onClick={closeAddNameModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
